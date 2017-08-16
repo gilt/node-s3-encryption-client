@@ -28,6 +28,7 @@
     "aws-sdk": "2.x"
   },
   "devDependencies": {
+    "mocha": "^2.4.5",
     "sinon": "^1.17.3"
   }
 }

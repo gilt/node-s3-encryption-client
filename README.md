@@ -1,4 +1,4 @@
-# node-s3-encryption-client
+# node-s3-encryption-client [![Build Status](https://travis-ci.org/gilt/node-s3-encryption-client.svg?branch=master)](https://travis-ci.org/gilt/node-s3-encryption-client)
 Node.js implementation of the KMS Envelope Encryption for AWS S3
 
 The Amazon S3 Encryption Client (http://docs.aws.amazon.com/kms/latest/developerguide/services-s3.html#sse-client)
