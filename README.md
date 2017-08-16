@@ -39,6 +39,16 @@ The character encoding of the file to be uploaded to S3, to be used when encrypt
 object. Optional, will be ignored if KmsKeyId is missing.
 
 
+### cacheFor
+Optionally call this method with a value > 0 in order to persist the object in an in-memory cache. This can be used
+to avoid repetitively loading objects from S3 and decrypting via KMS in functions that are frequently executed. The
+argument is the number of milliseconds for which the S3 object should remain in the cache before becoming stale. Keep
+in mind that this limit will only be met as long as the function remains in memory in Lambda (i.e. does not follow
+a cold-start of the function). Obviously, using a cache introduces the risk of the in-memory version getting out of
+sync with the object in S3; be sure to balance performance against a reasonable TTL that will allow the function to
+absorb edits to the object in a timely manner.
+
+
 ## Methodology
 You can read about KMS envelope encryption above, but here's the summary:
 

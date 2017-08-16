@@ -30,6 +30,7 @@ describe('node-s3-encryption-client', function() {
     afterEach(function() {
       kms.decrypt.restore();
       s3.getObject.restore();
+      s3Enc.cacheFor(0);
     });
 
     it('should decrypt content when a key is present', function() {
@@ -113,6 +114,89 @@ describe('node-s3-encryption-client', function() {
       });
     });
 
+    it('should not store encrypted values in the cache when timeout is zero', function() {
+      var helper = new crypt.Helper("12345w==");
+      sinon
+        .stub(s3, 'getObject')
+        .yields(null, {"Body": new Buffer(helper.encrypt("foo"), 'utf-8'), "Metadata": {"x-amz-key": "encrypted-key"}});
+      s3Enc.getObject({
+        Bucket: "test-bucket",
+        Key: "test-key"
+      }, function(err, data) {
+        assert.equal(err, null);
+        assert.equal(data.Body, "foo");
+        assert.deepEqual(data.Metadata, {});
+        s3.getObject.restore();
+        sinon
+          .stub(s3, 'getObject')
+          .yields(new Error('err'), null);
+        s3Enc.getObject({
+          Bucket: "test-bucket",
+          Key: "test-key"
+        }, function(err, data) {
+          assert.equal(err, "Error: err");
+          assert.equal(data, null);
+        });
+      });
+    });
+
+    it('should store encrypted values in the cache when timeout is non-zero', function() {
+      s3Enc.cacheFor(100);
+      var helper = new crypt.Helper("12345w==");
+      sinon
+        .stub(s3, 'getObject')
+        .yields(null, {"Body": new Buffer(helper.encrypt("foo"), 'utf-8'), "Metadata": {"x-amz-key": "encrypted-key"}});
+      s3Enc.getObject({
+        Bucket: "test-bucket",
+        Key: "test-key"
+      }, function(err, data) {
+        assert.equal(err, null);
+        assert.equal(data.Body, "foo");
+        assert.deepEqual(data.Metadata, {});
+        s3.getObject.restore();
+        sinon
+          .stub(s3, 'getObject')
+          .yields(new Error('err'), null);
+        s3Enc.getObject({
+          Bucket: "test-bucket",
+          Key: "test-key"
+        }, function(err, data) {
+          assert.equal(err, null);
+          assert.equal(data.Body, "foo");
+          assert.deepEqual(data.Metadata, {});
+        });
+      });
+    });
+
+    it('should invalidate encrypted values from the cache when non-zero timeout expires', function() {
+      s3Enc.cacheFor(100);
+      var helper = new crypt.Helper("12345w==");
+      sinon
+        .stub(s3, 'getObject')
+        .yields(null, {"Body": new Buffer(helper.encrypt("foo"), 'utf-8'), "Metadata": {"x-amz-key": "encrypted-key"}});
+      s3Enc.getObject({
+        Bucket: "test-bucket",
+        Key: "test-key"
+      }, function(err, data) {
+        assert.equal(err, null);
+        assert.equal(data.Body, "foo");
+        assert.deepEqual(data.Metadata, {});
+        s3.getObject.restore();
+        sinon
+          .stub(s3, 'getObject')
+          .yields(new Error('err'), null);
+        var waitUntil = new Date(new Date().getTime() + 110);
+        while(waitUntil > new Date()){}
+        s3Enc.getObject({
+          Bucket: "test-bucket",
+          Key: "test-key"
+        }, function(err, data) {
+          assert.equal(err, "Error: err");
+          assert.equal(data, null);
+        });
+      });
+    });
+
     it('should not decrypt content when there is no key', function() {
       sinon
         .stub(s3, 'getObject')
@@ -123,6 +207,58 @@ describe('node-s3-encryption-client', function() {
       }, function(err, data) {
         assert.equal(err, null);
         assert.equal(data.Body, "foo");
+      });
+    });
+
+    it('should pull unencrypted object from cache', function() {
+      s3Enc.cacheFor(100);
+      sinon
+        .stub(s3, 'getObject')
+        .yields(null, {"Body": new Buffer("foo", 'utf-8')});
+      s3Enc.getObject({
+        Bucket: "test-bucket",
+        Key: "test-key"
+      }, function(err, data) {
+        assert.equal(err, null);
+        assert.equal(data.Body, "foo");
+        s3.getObject.restore();
+        sinon
+          .stub(s3, 'getObject')
+          .yields(new Error('err'), null);
+        var waitUntil = new Date(new Date().getTime() + 110);
+        while(waitUntil > new Date()){}
+        s3Enc.getObject({
+          Bucket: "test-bucket",
+          Key: "test-key"
+        }, function(err, data) {
+          assert.equal(err, "Error: err");
+          assert.equal(data, null);
+        });
+      });
+    });
+
+    it('should invalidate unencrypted object from cache', function() {
+      s3Enc.cacheFor(100);
+      sinon
+        .stub(s3, 'getObject')
+        .yields(null, {"Body": new Buffer("foo", 'utf-8')});
+      s3Enc.getObject({
+        Bucket: "test-bucket",
+        Key: "test-key"
+      }, function(err, data) {
+        assert.equal(err, null);
+        assert.equal(data.Body, "foo");
+        s3.getObject.restore();
+        sinon
+          .stub(s3, 'getObject')
+          .yields(new Error('err'), null);
+        s3Enc.getObject({
+          Bucket: "test-bucket",
+          Key: "test-key"
+        }, function(err, data) {
+          assert.equal(err, null);
+          assert.equal(data.Body, "foo");
+        });
       });
     });
 
