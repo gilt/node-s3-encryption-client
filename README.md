@@ -49,6 +49,48 @@ sync with the object in S3; be sure to balance performance against a reasonable 
 absorb edits to the object in a timely manner.
 
 
+## Examples
+
+### Encrypt from file and upload to s3
+``` 
+  const fs = require('fs');
+  const s3encrypt = require('node-s3-encryption-client');
+
+  fs.readFile(FILEPATH, (err, stream) => {
+    const params = {
+      Body: stream,
+      Bucket: BUCKETNAME,
+      Key: KEYNAME,
+      KmsParams: {
+        KeyId: KMS_KEY_ID,
+        KeySpec: 'AES_256' // Other options available, see AWS documentation
+      }
+    }
+    // Use provided putObject function
+    s3encrypt.putObject(params, (err, success) => {
+      if(err) throw err;
+      console.log('Successfully encrypted and uploaded: %s', FILEPATH);
+    })
+  })
+``` 
+### Download from s3 and decrypt to file
+```
+  const fs = require('fs');
+  const s3encrypt = require('node-s3-encryption-client');
+
+  const params = {
+    Bucket: BUCKETNAME, 
+    Key: KEYNAME, 
+  };
+  s3encrypt.getObject(params, (err, fileData) => {
+    if(err){ throw err; }
+    fs.writeFile(FILEPATH, fileData.Body, function (err) {
+        if(err) throw err;
+        console.log('Successfully downloaded and decrypted: %s', FILEPATH);
+    });
+  })
+``` 
+
 ## Methodology
 You can read about KMS envelope encryption above, but here's the summary:
 
